@@ -1,6 +1,19 @@
 ﻿(menu-bar-mode -1)
 (tool-bar-mode -1)
 (scroll-bar-mode -1)
+(setq delete-old-versions -1 )		; delete excess backup versions silently
+(setq version-control t )		; use version control
+(setq vc-make-backup-files t )		; make backups file even when in version controlled dir
+(setq backup-directory-alist `(("." . "~/.emacs.d/backups")) ) ; which directory to put backups file
+(setq vc-follow-symlinks t )				       ; don't ask for confirmation when opening symlinked file
+(setq auto-save-file-name-transforms '((".*" "~/.emacs.d/auto-save-list/" t)) ) ;transform backups file name
+(setq inhibit-startup-screen t )	; inhibit useless and old-school startup screen
+(setq ring-bell-function 'ignore )	; silent bell when you make a mistake
+(setq coding-system-for-read 'utf-8 )	; use utf-8 by default
+(setq coding-system-for-write 'utf-8 )
+(setq sentence-end-double-space nil)	; sentence SHOULD end with only a point.
+(setq default-fill-column 80)		; toggle wrapping text at the 80th character
+(setq initial-scratch-message "Welcome in Emacs") ; print a default message in the empty scratch buffer opened at startup
 
 (require 'package)
 (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
@@ -20,98 +33,263 @@
 (defun dw/switch-project-hook ()
   (treemacs-projectile))
 
-(use-package evil
-  :ensure t
-  :init
-  (setq evil-want-integration nil)
-  :config
-  (evil-mode 1))
+(defun dw/enable-olivetti-mode ()
+  (olivetti-mode 1))
 
-(use-package evil-collection
-  :after evil
-  :ensure t
-  :config
-  (evil-collection-init))
+(defun dw/hugo-server (&optional arg)
+  (interactive "P")
+  (let* ((default-directory (concat (expand-file-name hugo-base-dir) "/"))
+         (proc (get-buffer-process hugo-buffer)))
+    (if (and proc (process-live-p proc))
+        (progn (interrupt-process proc)
+               (message "Stopped Hugo server"))
+      (start-process "hugo" hugo-buffer "hugo" "server" "--buildDrafts" "--watch" "-d" "dev")
+      (message "Started Hugo server")
+      (unless arg
+        (browse-url "http://localhost:1313/")))))
 
+
+(use-package evil :ensure t :init (setq evil-want-integration nil) :config (evil-mode 1))
+(use-package evil-collection :after evil :ensure t :config (evil-collection-init)) 
+(use-package which-key :ensure t :init (which-key-mode) :config (which-key-setup-side-window-bottom))
 (use-package nord-theme :ensure t)
-
-(use-package which-key
-  :ensure t
-  :init (which-key-mode)
+(use-package ivy :ensure t :init (ivy-mode 1))
+(use-package hydra :ensure t)
+(use-package projectile :ensure t
   :config
-  (which-key-setup-side-window-bottom))
-
-(use-package avy :ensure t)
-
-(use-package projectile
-  :ensure t
-  :config
-  (projectile-global-mode)
-  (setq projectile-enable-caching t))
-
-(use-package all-the-icons :ensure t)
-
-(use-package treemacs
-  :ensure t
-  :defer t
+  (progn
+    (projectile-global-mode)
+    (setq projectile-enable-caching t)
+    (projectile-register-project-type 'hugo '("config.toml")
+				      :compile "hugo"
+				      :run "hugo server --watch -d dev")
+    (projectile-register-project-type 'npm '("package.json")
+				      :compile "npm install"
+				      :test "npm test"
+				      :run "npm start"
+				      :test-suffix ".spec")))
+(use-package treemacs :ensure t :defer t
   :config
   (progn
     (use-package treemacs-evil :ensure t :demand t)
     (setq treemacs-change-root-without-asking t
-          treemacs-follow-after-init          t
-          treemacs-silent-filewatch           t
-          treemacs-silent-refresh             t)
+	  treemacs-follow-after-init          t
+	  treemacs-silent-filewatch           t
+	  treemacs-silent-refresh             t)
     (treemacs-follow-mode t)
     (treemacs-filewatch-mode t)))
-
-(use-package treemacs-projectile
-  :defer t
-  :ensure t
-  :config
-  (setq treemacs-header-function #'treemacs-projectile-create-header))
-
-(use-package hydra :ensure t)
-
+(use-package treemacs-projectile :ensure t :defer t)
+(use-package clojure-mode :ensure t)
+(use-package cider :ensure t)
 (use-package cider-hydra :ensure t)
+(use-package markdown-mode
+  :ensure t
+  :commands (markdown-mode gfm-mode)
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :init (setq markdown-command "multimarkdown"))
+(use-package parinfer
+  :ensure t
+  :bind
+  (("C-," . parinfer-toggle-mode))
+  :init
+  (progn
+    (setq parinfer-extensions
+          '(defaults       ; should be included.
+            pretty-parens  ; different paren styles for different modes.
+            evil           ; If you use Evil.
+            lispy          ; If you use Lispy. With this extension, you should install Lispy and do not enable lispy-mode directly.
+            paredit        ; Introduce some paredit commands.
+            smart-tab      ; C-b & C-f jump positions and smart shift with tab & S-tab.
+            smart-yank))   ; Yank behavior depend on mode.
+    (add-hook 'clojure-mode-hook #'parinfer-mode)
+    (add-hook 'emacs-lisp-mode-hook #'parinfer-mode)
+    (add-hook 'common-lisp-mode-hook #'parinfer-mode)
+    (add-hook 'scheme-mode-hook #'parinfer-mode)
+    (add-hook 'lisp-mode-hook #'parinfer-mode)))
+(use-package olivetti :ensure t)
+	  
+(defhydra hydra-ibuffer-main (:color pink :hint nil)
+  "
+ ^Navigation^ | ^Mark^        | ^Actions^        | ^View^
+-^----------^-+-^----^--------+-^-------^--------+-^----^-------
+  _k_:    ʌ   | _m_: mark     | _D_: delete      | _g_: refresh
+ _RET_: visit | _u_: unmark   | _S_: save        | _s_: sort
+  _j_:    v   | _*_: specific | _a_: all actions | _/_: filter
+-^----------^-+-^----^--------+-^-------^--------+-^----^-------
+"
+  ("j" ibuffer-forward-line)
+  ("RET" ibuffer-visit-buffer :color blue)
+  ("k" ibuffer-backward-line)
+
+  ("m" ibuffer-mark-forward)
+  ("u" ibuffer-unmark-forward)
+  ("*" hydra-ibuffer-mark/body :color blue)
+
+  ("D" ibuffer-do-delete)
+  ("S" ibuffer-do-save)
+  ("a" hydra-ibuffer-action/body :color blue)
+
+  ("g" ibuffer-update)
+  ("s" hydra-ibuffer-sort/body :color blue)
+  ("/" hydra-ibuffer-filter/body :color blue)
+
+  ("o" ibuffer-visit-buffer-other-window "other window" :color blue)
+  ("q" quit-window "quit ibuffer" :color blue)
+  ("." nil "toggle hydra" :color blue))
+
+(defhydra hydra-ibuffer-mark (:color teal :columns 5
+                              :after-exit (hydra-ibuffer-main/body))
+  "Mark"
+  ("*" ibuffer-unmark-all "unmark all")
+  ("M" ibuffer-mark-by-mode "mode")
+  ("m" ibuffer-mark-modified-buffers "modified")
+  ("u" ibuffer-mark-unsaved-buffers "unsaved")
+  ("s" ibuffer-mark-special-buffers "special")
+  ("r" ibuffer-mark-read-only-buffers "read-only")
+  ("/" ibuffer-mark-dired-buffers "dired")
+  ("e" ibuffer-mark-dissociated-buffers "dissociated")
+  ("h" ibuffer-mark-help-buffers "help")
+  ("z" ibuffer-mark-compressed-file-buffers "compressed")
+  ("b" hydra-ibuffer-main/body "back" :color blue))
+
+(defhydra hydra-ibuffer-action (:color teal :columns 4
+                                :after-exit
+                                (if (eq major-mode 'ibuffer-mode)
+                                    (hydra-ibuffer-main/body)))
+  "Action"
+  ("A" ibuffer-do-view "view")
+  ("E" ibuffer-do-eval "eval")
+  ("F" ibuffer-do-shell-command-file "shell-command-file")
+  ("I" ibuffer-do-query-replace-regexp "query-replace-regexp")
+  ("H" ibuffer-do-view-other-frame "view-other-frame")
+  ("N" ibuffer-do-shell-command-pipe-replace "shell-cmd-pipe-replace")
+  ("M" ibuffer-do-toggle-modified "toggle-modified")
+  ("O" ibuffer-do-occur "occur")
+  ("P" ibuffer-do-print "print")
+  ("Q" ibuffer-do-query-replace "query-replace")
+  ("R" ibuffer-do-rename-uniquely "rename-uniquely")
+  ("T" ibuffer-do-toggle-read-only "toggle-read-only")
+  ("U" ibuffer-do-replace-regexp "replace-regexp")
+  ("V" ibuffer-do-revert "revert")
+  ("W" ibuffer-do-view-and-eval "view-and-eval")
+  ("X" ibuffer-do-shell-command-pipe "shell-command-pipe")
+  ("b" nil "back"))
+
+(defhydra hydra-ibuffer-sort (:color amaranth :columns 3)
+  "Sort"
+  ("i" ibuffer-invert-sorting "invert")
+  ("a" ibuffer-do-sort-by-alphabetic "alphabetic")
+  ("v" ibuffer-do-sort-by-recency "recently used")
+  ("s" ibuffer-do-sort-by-size "size")
+  ("f" ibuffer-do-sort-by-filename/process "filename")
+  ("m" ibuffer-do-sort-by-major-mode "mode")
+  ("b" hydra-ibuffer-main/body "back" :color blue))
+
+(defhydra hydra-ibuffer-filter (:color amaranth :columns 4)
+  "Filter"
+  ("m" ibuffer-filter-by-used-mode "mode")
+  ("M" ibuffer-filter-by-derived-mode "derived mode")
+  ("n" ibuffer-filter-by-name "name")
+  ("c" ibuffer-filter-by-content "content")
+  ("e" ibuffer-filter-by-predicate "predicate")
+  ("f" ibuffer-filter-by-filename "filename")
+  (">" ibuffer-filter-by-size-gt "size")
+  ("<" ibuffer-filter-by-size-lt "size")
+  ("/" ibuffer-filter-disable "disable")
+  ("b" hydra-ibuffer-main/body "back" :color blue))
+
+(defhydra hydra-window ()
+   "
+Movement^^        ^Split^         ^Switch^		^Resize^
+----------------------------------------------------------------
+_h_ ←       	_v_ertical    	_b_uffer		_q_ X←
+_j_ ↓        	_x_ horizontal	_f_ind files	_w_ X↓
+_k_ ↑        	_z_ undo      	_a_ce 1		_e_ X↑
+_l_ →        	_Z_ reset      	_s_wap		_r_ X→
+_F_ollow		_D_lt Other   	_S_ave		max_i_mize
+_SPC_ cancel	_o_nly this   	_d_elete	
+"
+   ("h" windmove-left )
+   ("j" windmove-down )
+   ("k" windmove-up )
+   ("l" windmove-right )
+   ("q" hydra-move-splitter-left)
+   ("w" hydra-move-splitter-down)
+   ("e" hydra-move-splitter-up)
+   ("r" hydra-move-splitter-right)
+   ("b" helm-mini)
+   ("f" helm-find-files)
+   ("F" follow-mode)
+   ("a" (lambda ()
+          (interactive)
+          (ace-window 1)
+          (add-hook 'ace-window-end-once-hook
+                    'hydra-window/body))
+       )
+   ("v" (lambda ()
+          (interactive)
+          (split-window-right)
+          (windmove-right))
+       )
+   ("x" (lambda ()
+          (interactive)
+          (split-window-below)
+          (windmove-down))
+       )
+   ("s" (lambda ()
+          (interactive)
+          (ace-window 4)
+          (add-hook 'ace-window-end-once-hook
+                    'hydra-window/body)))
+   ("S" save-buffer)
+   ("d" delete-window)
+   ("D" (lambda ()
+          (interactive)
+          (ace-window 16)
+          (add-hook 'ace-window-end-once-hook
+                    'hydra-window/body))
+       )
+   ("o" delete-other-windows)
+   ("i" ace-maximize-window)
+   ("z" (progn
+          (winner-undo)
+          (setq this-command 'winner-undo))
+   )
+   ("Z" winner-redo)
+   ("SPC" nil)
+   )
 
 (use-package general :ensure t
   :config
   (progn
-    (general-evil-setup t)
+    (general-evil-setup)
     (general-define-key
-	:states '(normal visual insert emacs)
+        :states '(normal visual insert emacs)
 	:prefix "SPC"
 	:non-normal-prefix "M-SPC"
 	"SPC" '(counsel-M-x :which-key "M-x")
-	"b" '(:ignore t :which-key "Buffer")
-	"bk" '(dw/kill-this-buffer :which-key "Kill current buffer")
-	"bb" '(ibuffer :which-key "List buffers")
-	"f" '(:ignore t :which-key "File")
-	"ff" 'treemacs-find-file
-	"fo" 'treemacs-select-window
-	"h" '(:ignore t :which-key "Help")
-	"hb" '(describe-bindings :which-key "Describe bindings")
 	"p" '(:ignore t :which-key "Project")
-	"pp" '(projectile-switch-project :which-key "Switch project")
-	"pb" '(projectile-ibuffer :which-key "Project buffers"))
-
+	"ps" '(projectile-switch-project :which-key "Switch")
+	"pt" '(treemacs-projectile  :which-key "Tree")
+	"b" '(:ignore t :which-key "Buffer")
+	"bk" '(dw/kill-this-buffer :which-key "Kill")
+	"bb" '(ibuffer :which-key "List")
+	"w" '(hydra-window/body :which-key "Window"))
     (general-define-key
-	:states '(normal emacs)
-	"j" 'evil-next-visual-line
-	"k" 'evil-previous-visual-line)))
+     :states '(normal visual emacs)
+     :prefix "SPC"
+     :keymaps 'clojure-mode-map
+     "m" '(:ignore t :which-key "Clojure")
+     "m'" '(cider-jack-in :which-key "Jack-in")
+     "md" '(cider-hydra-doc/body :which-key "Doc")
+     "mr" '(cider-hydra-repl/body :which-key "Repl")
+     "mt" '(cider-hydra-test/body :which-key "Test")
+     "me" '(cider-hydra-eval/body :which-key "Eval"))))
 
-(add-hook 'projectile-after-switch-project-hook #'dw/switch-project-hook)
-
-(use-package clojure-mode :ensure t)
-(use-package cider :ensure t)
-
-(use-package ivy :ensure t
-  :init (ivy-mode 1)        ; enable ivy globally at startup
-  :config
-    (setq ivy-use-virtual-buffers t)   ; extend searching to bookmarks and …
-    (setq ivy-height 20)               ; set height of the ivy window
-    (setq ivy-count-format "(%d/%d) ") ; count format, from the ivy help page
-  )
+(add-hook 'ibuffer-hook #'hydra-ibuffer-main/body)
+(add-hook 'markdown-mode-hook 'dw/enable-olivetti-mode)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
