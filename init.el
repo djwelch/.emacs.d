@@ -20,7 +20,7 @@
                     (not (gnutls-available-p))))
        (proto (if no-ssl "http" "https")))
   ;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
-  (add-to-list 'package-archives (cons "melpa" (concat proto "://melpa.org/packages/")) t))
+  (add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t))
 (package-initialize)
 
 (set-face-attribute 'default nil :family "Consolas" :height 120)
@@ -50,10 +50,10 @@
 
 
 (use-package evil :ensure t :init (setq evil-want-integration nil) :config (evil-mode 1))
-(use-package evil-collection :after evil :ensure t :config (evil-collection-init)) 
 (use-package which-key :ensure t :init (which-key-mode) :config (which-key-setup-side-window-bottom))
 (use-package nord-theme :ensure t)
 (use-package ivy :ensure t :init (ivy-mode 1))
+(use-package counsel :ensure t)
 (use-package hydra :ensure t)
 (use-package projectile :ensure t
   :config
@@ -89,26 +89,22 @@
          ("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :init (setq markdown-command "multimarkdown"))
-(use-package parinfer
+(use-package paredit
   :ensure t
-  :bind
-  (("C-," . parinfer-toggle-mode))
   :init
-  (progn
-    (setq parinfer-extensions
-          '(defaults       ; should be included.
-            pretty-parens  ; different paren styles for different modes.
-            evil           ; If you use Evil.
-            lispy          ; If you use Lispy. With this extension, you should install Lispy and do not enable lispy-mode directly.
-            paredit        ; Introduce some paredit commands.
-            smart-tab      ; C-b & C-f jump positions and smart shift with tab & S-tab.
-            smart-yank))   ; Yank behavior depend on mode.
-    (add-hook 'clojure-mode-hook #'parinfer-mode)
-    (add-hook 'emacs-lisp-mode-hook #'parinfer-mode)
-    (add-hook 'common-lisp-mode-hook #'parinfer-mode)
-    (add-hook 'scheme-mode-hook #'parinfer-mode)
-    (add-hook 'lisp-mode-hook #'parinfer-mode)))
+  (add-hook 'clojure-mode-hook 'enable-paredit-mode)
+  (add-hook 'cider-repl-mode-hook 'enable-paredit-mode)
+  (add-hook 'lisp-mode-hook 'enable-paredit-mode)
+  (add-hook 'emacs-lisp-mode-hook 'enable-paredit-mode)
+  (add-hook 'lisp-interaction-mode-hook 'enable-paredit-mode)
+  (add-hook 'ielm-mode-hook 'enable-paredit-mode)
+  (add-hook 'json-mode-hook 'enable-paredit-mode))
+(use-package company
+  :ensure t
+  :defer t
+  :init (global-company-mode))
 (use-package olivetti :ensure t)
+(use-package evil-collection :after evil :ensure t :config (evil-collection-init)) 
 	  
 (defhydra hydra-ibuffer-main (:color pink :hint nil)
   "
