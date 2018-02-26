@@ -92,6 +92,11 @@
     (treemacs-follow-mode t)
     (treemacs-filewatch-mode t)))
 (use-package treemacs-projectile :ensure t :defer t)
+(use-package fill-column-indicator
+  :ensure t
+  :config
+  (progn
+    (add-hook 'clojure-mode-hook 'fci-mode)))
 (use-package clojure-mode :ensure t)
 (use-package cider :ensure t)
 (use-package cider-hydra :ensure t)
@@ -102,16 +107,16 @@
          ("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode))
   :init (setq markdown-command "multimarkdown"))
-(use-package paredit
-  :ensure t
-  :init
-  (add-hook 'clojure-mode-hook 'enable-paredit-mode)
-  (add-hook 'cider-repl-mode-hook 'enable-paredit-mode)
-  (add-hook 'lisp-mode-hook 'enable-paredit-mode)
-  (add-hook 'emacs-lisp-mode-hook 'enable-paredit-mode)
-  (add-hook 'lisp-interaction-mode-hook 'enable-paredit-mode)
-  (add-hook 'ielm-mode-hook 'enable-paredit-mode)
-  (add-hook 'json-mode-hook 'enable-paredit-mode))
+;;(use-package paredit
+;;  :ensure t
+;;  :init
+;;  (add-hook 'clojure-mode-hook 'enable-paredit-mode)
+;;  (add-hook 'cider-repl-mode-hook 'enable-paredit-mode)
+;;  (add-hook 'lisp-mode-hook 'enable-paredit-mode)
+;;  (add-hook 'emacs-lisp-mode-hook 'enable-paredit-mode)
+;;  (add-hook 'lisp-interaction-mode-hook 'enable-paredit-mode)
+;;  (add-hook 'ielm-mode-hook 'enable-paredit-mode)
+;;  (add-hook 'json-mode-hook 'enable-paredit-mode))
 (use-package company
   :ensure t
   :init (global-company-mode))
@@ -304,6 +309,8 @@ _SPC_ cancel	_o_nly this   	_d_elete
 (add-hook 'ibuffer-hook #'hydra-ibuffer-main/body)
 (add-hook 'markdown-mode-hook 'dw/enable-olivetti-mode)
 
+(setq-default fill-column 80)
+
 ;;;; example of setting env var named “path”, by appending a new path to existing path
 ;;(setenv "PATH"
 ;;  (concat
@@ -319,9 +326,4 @@ _SPC_ cancel	_o_nly this   	_d_elete
  '(package-selected-packages
    (quote
     (cider-hydra clojure-mode evil-collection all-the-icons-dired ibuffer-sidebar treemacs nord-theme use-package))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+
