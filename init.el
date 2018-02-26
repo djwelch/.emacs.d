@@ -21,7 +21,7 @@
                     (not (gnutls-available-p))))
        (proto (if no-ssl "http" "https")))
   ;; Comment/uncomment these two lines to enable/disable MELPA and MELPA Stable as desired
-  (add-to-list 'package-archives (cons "melpa-stable" (concat proto "://stable.melpa.org/packages/")) t))
+  (add-to-list 'package-archives (cons "melpa-stable" (concat proto "://melpa.org/packages/")) t))
 (package-initialize)
 
 (set-face-attribute 'default nil :family "Consolas" :height 120)
@@ -117,6 +117,8 @@
 ;;  (add-hook 'lisp-interaction-mode-hook 'enable-paredit-mode)
 ;;  (add-hook 'ielm-mode-hook 'enable-paredit-mode)
 ;;  (add-hook 'json-mode-hook 'enable-paredit-mode))
+(use-package clj-refactor :ensure t :init (add-hook 'clojure-mode-hook #'dw/clojure-mode-hook))
+
 (use-package company
   :ensure t
   :init (global-company-mode))
@@ -300,9 +302,9 @@ _SPC_ cancel	_o_nly this   	_d_elete
      :keymaps 'clojure-mode-map
      "m" '(:ignore t :which-key "Clojure")
      "m'" '(cider-jack-in :which-key "Jack-in")
-     "mR" '(hydra-cljr-help-menu/body :which-key "Refactor")
+     "mr" '(hydra-cljr-help-menu/body :which-key "Refactor")
      "md" '(cider-hydra-doc/body :which-key "Doc")
-     "mr" '(cider-hydra-repl/body :which-key "Repl")
+     "ms" '(cider-hydra-repl/body :which-key "Repl")
      "mt" '(cider-hydra-test/body :which-key "Test")
      "me" '(cider-hydra-eval/body :which-key "Eval"))))
 
@@ -327,3 +329,9 @@ _SPC_ cancel	_o_nly this   	_d_elete
    (quote
     (cider-hydra clojure-mode evil-collection all-the-icons-dired ibuffer-sidebar treemacs nord-theme use-package))))
 
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
