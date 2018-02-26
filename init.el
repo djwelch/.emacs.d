@@ -14,6 +14,7 @@
 (setq sentence-end-double-space nil)	; sentence SHOULD end with only a point.
 (setq default-fill-column 80)		; toggle wrapping text at the 80th character
 (setq initial-scratch-message "Welcome in Emacs") ; print a default message in the empty scratch buffer opened at startup
+(setq ediff-diff-program "C:/Progam Files/Git/usr/bin/diff.exe")
 
 (require 'package)
 (let* ((no-ssl (and (memq system-type '(windows-nt ms-dos))
@@ -36,6 +37,10 @@
 (defun dw/enable-olivetti-mode ()
   (olivetti-mode 1))
 
+(defun dw/clojure-mode-hook ()
+  (clj-refactor-mode 1)
+  (yas-minor-mode 1))
+
 (defun dw/hugo-server (&optional arg)
   (interactive "P")
   (let* ((default-directory (concat (expand-file-name hugo-base-dir) "/"))
@@ -49,7 +54,15 @@
         (browse-url "http://localhost:1313/")))))
 
 
-(use-package evil :ensure t :init (setq evil-want-integration nil) :config (evil-mode 1))
+(use-package evil :ensure t :init (setq evil-want-integration nil)
+  :config
+  (progn
+    (setq evil-emacs-state-modes nil)
+    (setq evil-insert-state-modes nil)
+    (setq evil-motion-state-modes nil)
+    (setq evil-normal-state-modes
+	  (append evil-emacs-state-modes evil-insert-state-modes evil-normal-state-modes evil-motion-state-modes))
+    (evil-mode 1)))
 (use-package which-key :ensure t :init (which-key-mode) :config (which-key-setup-side-window-bottom))
 (use-package nord-theme :ensure t)
 (use-package ivy :ensure t :init (ivy-mode 1))
@@ -101,8 +114,11 @@
   (add-hook 'json-mode-hook 'enable-paredit-mode))
 (use-package company
   :ensure t
-  :defer t
   :init (global-company-mode))
+(use-package clj-refactor
+  :ensure t
+  :init
+  (add-hook 'clojure-mode-hook 'dw/clojure-mode-hook))
 (use-package olivetti :ensure t)
 (use-package evil-collection :after evil :ensure t :config (evil-collection-init)) 
 	  
@@ -279,6 +295,7 @@ _SPC_ cancel	_o_nly this   	_d_elete
      :keymaps 'clojure-mode-map
      "m" '(:ignore t :which-key "Clojure")
      "m'" '(cider-jack-in :which-key "Jack-in")
+     "mR" '(hydra-cljr-help-menu/body :which-key "Refactor")
      "md" '(cider-hydra-doc/body :which-key "Doc")
      "mr" '(cider-hydra-repl/body :which-key "Repl")
      "mt" '(cider-hydra-test/body :which-key "Test")
@@ -286,6 +303,13 @@ _SPC_ cancel	_o_nly this   	_d_elete
 
 (add-hook 'ibuffer-hook #'hydra-ibuffer-main/body)
 (add-hook 'markdown-mode-hook 'dw/enable-olivetti-mode)
+
+;;;; example of setting env var named “path”, by appending a new path to existing path
+;;(setenv "PATH"
+;;  (concat
+;;   "C:/Program Files/Git/usr/bin" ";"
+;;   (getenv "PATH")))
+
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
